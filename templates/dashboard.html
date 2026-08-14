@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teto & Altar - Dashboard</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <style>
+        body { 
+            background-color: #f8f9fa; 
+            padding-bottom: 70px; /* Space for bottom nav */
+        }
+        .header {
+            background-color: #ffffff;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        /* Resumo Cards */
+        .summary-card {
+            border-radius: 1rem;
+            border: none;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+        .summary-val {
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+        /* Bottom Navigation */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background-color: #ffffff;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-around;
+            padding: 10px 0;
+            z-index: 1000;
+        }
+        .nav-item {
+            text-align: center;
+            color: #6c757d;
+            text-decoration: none;
+            font-size: 0.85rem;
+        }
+        .nav-item i {
+            display: block;
+            font-size: 1.3rem;
+            margin-bottom: 2px;
+        }
+        .nav-item.active {
+            color: #0d6efd;
+        }
+        /* Floating Action Button (FAB) */
+        .fab {
+            position: fixed;
+            bottom: 75px;
+            right: 20px;
+            background-color: #0d6efd;
+            color: white;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            box-shadow: 0 4px 10px rgba(13, 110, 253, 0.4);
+            border: none;
+            cursor: pointer;
+            z-index: 1010;
+        }
+        .fab:hover {
+            background-color: #0b5ed7;
+            color: white;
+        }
+        /* Transaction list */
+        .tx-item {
+            background: white;
+            border-radius: 0.5rem;
+            margin-bottom: 10px;
+            padding: 15px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+            border-left: 5px solid transparent;
+        }
+        .tx-receita { border-left-color: #198754; }
+        .tx-despesa { border-left-color: #dc3545; }
+        
+        .tx-val-receita { color: #198754; font-weight: bold; }
+        .tx-val-despesa { color: #dc3545; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header py-3 px-3 mb-4 d-flex justify-content-between align-items-center">
+    <h5 class="m-0">Teto & Altar</h5>
+    <button class="btn btn-sm btn-outline-secondary" onclick="logout()">Sair</button>
+</div>
+
+<div class="container">
+    <!-- Resumo -->
+    <div class="row mb-4">
+        <div class="col-6 pe-2">
+            <div class="card summary-card p-3 h-100 text-center">
+                <div class="text-muted small mb-1">Casamento 💍</div>
+                <div class="summary-val text-primary" id="val-casamento">R$ 0,00</div>
+            </div>
+        </div>
+        <div class="col-6 ps-2">
+            <div class="card summary-card p-3 h-100 text-center">
+                <div class="text-muted small mb-1">Apartamento 🏠</div>
+                <div class="summary-val text-primary" id="val-apartamento">R$ 0,00</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lista de Transações -->
+    <h6 class="mb-3 text-muted">Últimos Lançamentos (Casal)</h6>
+    <div id="tx-list">
+        <div class="text-center text-muted py-4">Carregando...</div>
+    </div>
+</div>
+
+<!-- Floating Action Button -->
+<button class="fab" data-bs-toggle="modal" data-bs-target="#newTxModal">
+    <i class="bi bi-plus"></i>
+</button>
+
+<!-- Bottom Navigation -->
+<div class="bottom-nav">
+    <a href="#" class="nav-item active">
+        <i class="bi bi-house-door-fill"></i>
+        Início
+    </a>
+    <a href="#" class="nav-item">
+        <i class="bi bi-pie-chart-fill"></i>
+        Relatórios
+    </a>
+</div>
+
+<!-- Modal Novo Lançamento -->
+<div class="modal fade" id="newTxModal" tabindex="-1" aria-labelledby="newTxModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="newTxModalLabel">Novo Lançamento</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        
+        <!-- Alertas -->
+        <div id="modal-alert" class="alert d-none" role="alert"></div>
+
+        <form id="tx-form">
+            
+            <div class="mb-3">
+                <label class="form-label">Tipo</label>
+                <div class="d-flex gap-2">
+                    <input type="radio" class="btn-check" name="tipo" id="tipo-despesa" value="despesa" autocomplete="off" checked>
+                    <label class="btn btn-outline-danger w-50" for="tipo-despesa">Saída (Despesa)</label>
+
+                    <input type="radio" class="btn-check" name="tipo" id="tipo-receita" value="receita" autocomplete="off">
+                    <label class="btn btn-outline-success w-50" for="tipo-receita">Entrada (Receita)</label>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Valor (R$)</label>
+                <input type="number" step="0.01" class="form-control form-control-lg" id="valor" placeholder="0.00" required>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Projeto (Meta)</label>
+                <select class="form-select form-select-lg" id="goal_id" required>
+                    <option value="" disabled selected>Selecione...</option>
+                </select>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Categoria</label>
+                <select class="form-select form-select-lg" id="category_id" required>
+                    <option value="" disabled selected>Selecione...</option>
+                </select>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Descrição (Opcional)</label>
+                <input type="text" class="form-control" id="descricao" placeholder="Ex: Fotógrafo, Piso...">
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-lg w-100" id="btn-save-tx">Salvar Lançamento</button>
+        </form>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+    const token = localStorage.getItem('teto_token');
+    if (!token) {
+        window.location.href = '/';
+    }
+
+    const headers = {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+    };
+
+    const formatCurrency = (value) => {
+        return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
+    };
+
+    const formatDate = (dateStr) => {
+        const d = new Date(dateStr);
+        return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'});
+    };
+
+    const logout = () => {
+        localStorage.removeItem('teto_token');
+        window.location.href = '/';
+    };
+
+    // Load Dashboard Data
+    const loadDashboard = async () => {
+        try {
+            const res = await fetch('/dashboard', { headers });
+            if (res.status === 401) return logout();
+            const data = await res.json();
+            
+            document.getElementById('val-casamento').textContent = formatCurrency(data.total_casamento);
+            document.getElementById('val-apartamento').textContent = formatCurrency(data.total_apartamento);
+
+            const txList = document.getElementById('tx-list');
+            txList.innerHTML = '';
+            
+            if (data.last_transactions.length === 0) {
+                txList.innerHTML = '<div class="text-center text-muted">Nenhum lançamento encontrado.</div>';
+            }
+
+            data.last_transactions.forEach(tx => {
+                const isReceita = tx.tipo === 'receita';
+                const html = `
+                    <div class="tx-item ${isReceita ? 'tx-receita' : 'tx-despesa'} d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="fw-bold">${tx.category.nome}</div>
+                            <div class="small text-muted">${tx.goal.nome} • ${formatDate(tx.data)} • ${tx.user.nome}</div>
+                            ${tx.descricao ? `<div class="small mt-1">${tx.descricao}</div>` : ''}
+                        </div>
+                        <div class="${isReceita ? 'tx-val-receita' : 'tx-val-despesa'}">
+                            ${isReceita ? '+' : '-'} ${formatCurrency(tx.valor)}
+                        </div>
+                    </div>
+                `;
+                txList.innerHTML += html;
+            });
+
+        } catch (e) {
+            console.error(e);
+        }
+    };
+
+    // Load Selects (Goals & Categories)
+    const loadFormOptions = async () => {
+        try {
+            const [goalsRes, catsRes] = await Promise.all([
+                fetch('/goals', { headers }),
+                fetch('/categories', { headers })
+            ]);
+            
+            const goals = await goalsRes.json();
+            const categories = await catsRes.json();
+
+            const goalSelect = document.getElementById('goal_id');
+            goals.forEach(g => {
+                goalSelect.innerHTML += `<option value="${g.id}">${g.nome}</option>`;
+            });
+
+            const catSelect = document.getElementById('category_id');
+            categories.forEach(c => {
+                catSelect.innerHTML += `<option value="${c.id}">${c.nome}</option>`;
+            });
+
+        } catch (e) {
+            console.error(e);
+        }
+    };
+
+    // Handle Form Submit
+    document.getElementById('tx-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const btnSave = document.getElementById('btn-save-tx');
+        const alert = document.getElementById('modal-alert');
+        
+        btnSave.disabled = true;
+        btnSave.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Salvando...';
+
+        const tipo = document.querySelector('input[name="tipo"]:checked').value;
+        const valor = parseFloat(document.getElementById('valor').value);
+        const goal_id = parseInt(document.getElementById('goal_id').value);
+        const category_id = parseInt(document.getElementById('category_id').value);
+        const descricao = document.getElementById('descricao').value;
+
+        try {
+            const res = await fetch('/transactions', {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({ valor, tipo, goal_id, category_id, descricao })
+            });
+
+            if (res.ok) {
+                // Success
+                alert.className = 'alert alert-success';
+                alert.textContent = 'Lançamento salvo com sucesso!';
+                
+                // Clear Form
+                document.getElementById('valor').value = '';
+                document.getElementById('descricao').value = '';
+                
+                // Reload Dashboard
+                loadDashboard();
+                
+                // Hide modal after short delay
+                setTimeout(() => {
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('newTxModal'));
+                    modal.hide();
+                    alert.className = 'alert d-none';
+                }, 1000);
+
+            } else {
+                alert.className = 'alert alert-danger';
+                alert.textContent = 'Erro ao salvar lançamento.';
+            }
+        } catch (e) {
+            alert.className = 'alert alert-danger';
+            alert.textContent = 'Erro de conexão.';
+        } finally {
+            btnSave.disabled = false;
+            btnSave.textContent = 'Salvar Lançamento';
+        }
+    });
+
+    // Initialize
+    loadDashboard();
+    loadFormOptions();
+
+</script>
+
+<!-- Bootstrap 5 JS Bundle -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
