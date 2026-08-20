@@ -201,49 +201,59 @@
 </div>
 
 <script>
+    // Recupera o token de acesso salvo no navegador e redireciona para login se não existir
     const token = localStorage.getItem('teto_token');
     if (!token) {
         window.location.href = '/';
     }
 
+    // Prepara os cabeçalhos das requisições incluindo o token de autenticação
     const headers = {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
     };
 
+    // Função utilitária para formatar valores no formato moeda real (R$)
     const formatCurrency = (value) => {
         return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
     };
 
+    // Função utilitária para exibir a data e a hora de forma legível
     const formatDate = (dateStr) => {
         const d = new Date(dateStr);
         return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'});
     };
 
+    // Apaga o token de acesso e retorna o usuário à tela de login
     const logout = () => {
         localStorage.removeItem('teto_token');
         window.location.href = '/';
     };
 
-    // Load Dashboard Data
+    // Função responsável por carregar e renderizar os dados principais do Dashboard
     const loadDashboard = async () => {
         try {
+            // Faz a requisição na API
             const res = await fetch('/dashboard', { headers });
-            if (res.status === 401) return logout();
+            if (res.status === 401) return logout(); // Se token inválido/expirado, força o logout
             const data = await res.json();
             
+            // Atualiza os saldos totais na interface
             document.getElementById('val-casamento').textContent = formatCurrency(data.total_casamento);
             document.getElementById('val-apartamento').textContent = formatCurrency(data.total_apartamento);
 
             const txList = document.getElementById('tx-list');
             txList.innerHTML = '';
             
+            // Exibe mensagem se não houver transações
             if (data.last_transactions.length === 0) {
                 txList.innerHTML = '<div class="text-center text-muted">Nenhum lançamento encontrado.</div>';
             }
 
+            // Renderiza cada transação recebida
             data.last_transactions.forEach(tx => {
                 const isReceita = tx.tipo === 'receita';
+                // Define o HTML do item verificando se é entrada (receita) ou saída (despesa)
                 const html = `
                     <div class="tx-item ${isReceita ? 'tx-receita' : 'tx-despesa'} d-flex justify-content-between align-items-center">
                         <div>
@@ -260,13 +270,14 @@
             });
 
         } catch (e) {
-            console.error(e);
+            console.error("Erro ao carregar o dashboard:", e);
         }
     };
 
-    // Load Selects (Goals & Categories)
+    // Função responsável por preencher as opções de Metas e Categorias no formulário de Lançamento
     const loadFormOptions = async () => {
         try {
+            // Requisita os dados paralelamente para carregar mais rápido
             const [goalsRes, catsRes] = await Promise.all([
                 fetch('/goals', { headers }),
                 fetch('/categories', { headers })
@@ -275,31 +286,35 @@
             const goals = await goalsRes.json();
             const categories = await catsRes.json();
 
+            // Preenche as <options> no select de Projetos/Metas
             const goalSelect = document.getElementById('goal_id');
             goals.forEach(g => {
                 goalSelect.innerHTML += `<option value="${g.id}">${g.nome}</option>`;
             });
 
+            // Preenche as <options> no select de Categorias
             const catSelect = document.getElementById('category_id');
             categories.forEach(c => {
                 catSelect.innerHTML += `<option value="${c.id}">${c.nome}</option>`;
             });
 
         } catch (e) {
-            console.error(e);
+            console.error("Erro ao carregar opções do formulário:", e);
         }
     };
 
-    // Handle Form Submit
+    // Trata o envio do formulário de novo lançamento (Receita/Despesa)
     document.getElementById('tx-form').addEventListener('submit', async (e) => {
-        e.preventDefault();
+        e.preventDefault(); // Impede recarregamento da página
         
         const btnSave = document.getElementById('btn-save-tx');
         const alert = document.getElementById('modal-alert');
         
+        // Bloqueia o botão e mostra estado de carregamento
         btnSave.disabled = true;
         btnSave.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Salvando...';
 
+        // Coleta os valores do formulário
         const tipo = document.querySelector('input[name="tipo"]:checked').value;
         const valor = parseFloat(document.getElementById('valor').value);
         const goal_id = parseInt(document.getElementById('goal_id').value);
@@ -307,6 +322,7 @@
         const descricao = document.getElementById('descricao').value;
 
         try {
+            // Envia a transação via método POST para a API
             const res = await fetch('/transactions', {
                 method: 'POST',
                 headers,
@@ -314,18 +330,18 @@
             });
 
             if (res.ok) {
-                // Success
+                // Se o lançamento for registrado com sucesso, exibe uma mensagem positiva
                 alert.className = 'alert alert-success';
                 alert.textContent = 'Lançamento salvo com sucesso!';
                 
-                // Clear Form
+                // Limpa os campos do formulário para próximos usos
                 document.getElementById('valor').value = '';
                 document.getElementById('descricao').value = '';
                 
-                // Reload Dashboard
+                // Atualiza o dashboard para mostrar os novos dados inseridos
                 loadDashboard();
                 
-                // Hide modal after short delay
+                // Fecha o modal (tela de formulário) após 1 segundo
                 setTimeout(() => {
                     const modal = bootstrap.Modal.getInstance(document.getElementById('newTxModal'));
                     modal.hide();
@@ -333,13 +349,16 @@
                 }, 1000);
 
             } else {
+                // Em caso de erro na resposta, avisa o usuário
                 alert.className = 'alert alert-danger';
                 alert.textContent = 'Erro ao salvar lançamento.';
             }
         } catch (e) {
+            // Em caso de erro de conexão (API offline, internet caiu)
             alert.className = 'alert alert-danger';
             alert.textContent = 'Erro de conexão.';
         } finally {
+            // Libera o botão de salvar no final do processo
             btnSave.disabled = false;
             btnSave.textContent = 'Salvar Lançamento';
         }

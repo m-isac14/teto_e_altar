@@ -5,15 +5,22 @@ services:
     image: mysql:8.0
     container_name: teto_altar_db
     environment:
+      # Define a senha do usuário 'root' do MySQL
       MYSQL_ROOT_PASSWORD: root
+      # Cria o banco de dados inicializado com este nome
       MYSQL_DATABASE: teto_altar
+      # Cria um usuário comum para ser utilizado pela aplicação
       MYSQL_USER: teto_user
+      # Define a senha para o usuário comum
       MYSQL_PASSWORD: teto_password
     ports:
+      # Mapeia a porta 3306 do contêiner para a 3306 do host local (onde sua API irá se conectar)
       - "3306:3306"
     volumes:
+      # Volume persistente para que os dados não sejam perdidos quando o contêiner for desligado
       - mysql_data:/var/lib/mysql
     restart: unless-stopped
 
 volumes:
+  # Declaração do volume nomeado que armazena os dados físicos do banco de dados
   mysql_data:

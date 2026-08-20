@@ -40,17 +40,21 @@
 </div>
 
 <script>
+    // Adiciona um ouvinte para interceptar o envio do formulário
     document.getElementById('login-form').addEventListener('submit', async (e) => {
-        e.preventDefault();
+        e.preventDefault(); // Impede o comportamento padrão (recarregar a página)
+        
         const email = document.getElementById('email').value;
         const password = document.getElementById('password').value;
         const errorAlert = document.getElementById('error-alert');
 
+        // Cria os dados de formulário esperados pelo OAuth2 do FastAPI (Form URL Encoded)
         const formData = new URLSearchParams();
         formData.append('username', email);
         formData.append('password', password);
 
         try {
+            // Dispara a requisição de login para a rota /login
             const response = await fetch('/login', {
                 method: 'POST',
                 headers: {
@@ -60,20 +64,25 @@
             });
 
             if (response.ok) {
+                // Se o login for bem-sucedido, extrai o token JWT
                 const data = await response.json();
+                // Armazena o token no armazenamento local do navegador para sessões futuras
                 localStorage.setItem('teto_token', data.access_token);
+                // Redireciona o usuário para a página principal (Dashboard)
                 window.location.href = '/app';
             } else {
+                // Se as credenciais estiverem erradas, exibe um alerta
                 errorAlert.textContent = "Usuário ou senha incorretos!";
                 errorAlert.classList.remove('d-none');
             }
         } catch (error) {
+            // Se houver algum erro de rede, exibe um alerta de conexão
             errorAlert.textContent = "Erro de conexão com o servidor.";
             errorAlert.classList.remove('d-none');
         }
     });
 
-    // Redirecionar se já estiver logado
+    // Se o usuário já possuir um token salvo (já estiver logado), redireciona direto para o Dashboard
     if (localStorage.getItem('teto_token')) {
         window.location.href = '/app';
     }
