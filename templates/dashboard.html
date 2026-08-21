@@ -1,64 +1,76 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Teto & Altar - Dashboard</title>
-    <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <style>
-        body { 
-            background-color: #f8f9fa; 
-            padding-bottom: 70px; /* Space for bottom nav */
+        body {
+            background-color: #f8f9fa;
+            padding-bottom: 70px;
         }
+
         .header {
             background-color: #ffffff;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
         }
-        /* Resumo Cards */
+
         .summary-card {
             border-radius: 1rem;
             border: none;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
         }
+
         .summary-val {
             font-size: 1.5rem;
             font-weight: 700;
         }
-        /* Bottom Navigation */
+
         .bottom-nav {
             position: fixed;
             bottom: 0;
             left: 0;
             width: 100%;
             background-color: #ffffff;
-            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
             display: flex;
             justify-content: space-around;
             padding: 10px 0;
             z-index: 1000;
         }
+
         .nav-item {
             text-align: center;
             color: #6c757d;
             text-decoration: none;
             font-size: 0.85rem;
         }
+
         .nav-item i {
             display: block;
             font-size: 1.3rem;
             margin-bottom: 2px;
         }
+
         .nav-item.active {
             color: #0d6efd;
         }
-        /* Floating Action Button (FAB) */
-        .fab {
+
+        /* Speed Dial */
+        .speed-dial {
             position: fixed;
-            bottom: 75px;
+            bottom: 85px;
             right: 20px;
+            z-index: 1010;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .fab {
             background-color: #0d6efd;
             color: white;
             width: 60px;
@@ -71,306 +83,323 @@
             box-shadow: 0 4px 10px rgba(13, 110, 253, 0.4);
             border: none;
             cursor: pointer;
-            z-index: 1010;
+            transition: transform 0.3s ease, background-color 0.3s ease;
         }
+
+        .fab.active {
+            transform: rotate(45deg);
+            background-color: #dc3545;
+            box-shadow: 0 4px 10px rgba(220, 53, 69, 0.4);
+        }
+
         .fab:hover {
-            background-color: #0b5ed7;
+            filter: brightness(1.1);
             color: white;
         }
-        /* Transaction list */
+
+        .sd-menu {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 15px;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(20px);
+            transition: all 0.3s ease;
+        }
+
+        .sd-menu.open {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        .sd-item {
+            background-color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 500;
+        }
+
+        .sd-item-saida {
+            color: #dc3545;
+        }
+
+        .sd-item-entrada {
+            color: #198754;
+        }
+
         .tx-item {
             background: white;
             border-radius: 0.5rem;
             margin-bottom: 10px;
             padding: 15px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
             border-left: 5px solid transparent;
         }
-        .tx-receita { border-left-color: #198754; }
-        .tx-despesa { border-left-color: #dc3545; }
-        
-        .tx-val-receita { color: #198754; font-weight: bold; }
-        .tx-val-despesa { color: #dc3545; font-weight: bold; }
+
+        .tx-receita {
+            border-left-color: #198754;
+        }
+
+        .tx-despesa {
+            border-left-color: #dc3545;
+        }
+
+        .tx-val-receita {
+            color: #198754;
+            font-weight: bold;
+        }
+
+        .tx-val-despesa {
+            color: #dc3545;
+            font-weight: bold;
+        }
     </style>
 </head>
+
 <body>
-
-<!-- Header -->
-<div class="header py-3 px-3 mb-4 d-flex justify-content-between align-items-center">
-    <h5 class="m-0">Teto & Altar</h5>
-    <button class="btn btn-sm btn-outline-secondary" onclick="logout()">Sair</button>
-</div>
-
-<div class="container">
-    <!-- Resumo -->
-    <div class="row mb-4">
-        <div class="col-6 pe-2">
-            <div class="card summary-card p-3 h-100 text-center">
-                <div class="text-muted small mb-1">Casamento 💍</div>
-                <div class="summary-val text-primary" id="val-casamento">R$ 0,00</div>
-            </div>
-        </div>
-        <div class="col-6 ps-2">
-            <div class="card summary-card p-3 h-100 text-center">
-                <div class="text-muted small mb-1">Apartamento 🏠</div>
-                <div class="summary-val text-primary" id="val-apartamento">R$ 0,00</div>
-            </div>
-        </div>
+    <div class="header py-3 px-3 mb-4 d-flex justify-content-between align-items-center">
+        <h5 class="m-0">Teto & Altar</h5>
+        <button class="btn btn-sm btn-outline-secondary" onclick="logout()">Sair</button>
     </div>
 
-    <!-- Lista de Transações -->
-    <h6 class="mb-3 text-muted">Últimos Lançamentos (Casal)</h6>
-    <div id="tx-list">
-        <div class="text-center text-muted py-4">Carregando...</div>
-    </div>
-</div>
-
-<!-- Floating Action Button -->
-<button class="fab" data-bs-toggle="modal" data-bs-target="#newTxModal">
-    <i class="bi bi-plus"></i>
-</button>
-
-<!-- Bottom Navigation -->
-<div class="bottom-nav">
-    <a href="#" class="nav-item active">
-        <i class="bi bi-house-door-fill"></i>
-        Início
-    </a>
-    <a href="#" class="nav-item">
-        <i class="bi bi-pie-chart-fill"></i>
-        Relatórios
-    </a>
-</div>
-
-<!-- Modal Novo Lançamento -->
-<div class="modal fade" id="newTxModal" tabindex="-1" aria-labelledby="newTxModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="newTxModalLabel">Novo Lançamento</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-        
-        <!-- Alertas -->
-        <div id="modal-alert" class="alert d-none" role="alert"></div>
-
-        <form id="tx-form">
-            
-            <div class="mb-3">
-                <label class="form-label">Tipo</label>
-                <div class="d-flex gap-2">
-                    <input type="radio" class="btn-check" name="tipo" id="tipo-despesa" value="despesa" autocomplete="off" checked>
-                    <label class="btn btn-outline-danger w-50" for="tipo-despesa">Saída (Despesa)</label>
-
-                    <input type="radio" class="btn-check" name="tipo" id="tipo-receita" value="receita" autocomplete="off">
-                    <label class="btn btn-outline-success w-50" for="tipo-receita">Entrada (Receita)</label>
+    <div class="container">
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card summary-card p-4 h-100 text-center">
+                    <div class="text-muted small mb-1">Saldo Caixa Geral 🏦</div>
+                    <div class="summary-val text-primary" id="val-caixa-geral">R$ 0,00</div>
                 </div>
             </div>
+        </div>
 
-            <div class="mb-3">
-                <label class="form-label">Valor (R$)</label>
-                <input type="number" step="0.01" class="form-control form-control-lg" id="valor" placeholder="0.00" required>
-            </div>
-
-            <div class="mb-3">
-                <label class="form-label">Projeto (Meta)</label>
-                <select class="form-select form-select-lg" id="goal_id" required>
-                    <option value="" disabled selected>Selecione...</option>
-                </select>
-            </div>
-
-            <div class="mb-3">
-                <label class="form-label">Categoria</label>
-                <select class="form-select form-select-lg" id="category_id" required>
-                    <option value="" disabled selected>Selecione...</option>
-                </select>
-            </div>
-
-            <div class="mb-3">
-                <label class="form-label">Descrição (Opcional)</label>
-                <input type="text" class="form-control" id="descricao" placeholder="Ex: Fotógrafo, Piso...">
-            </div>
-
-            <button type="submit" class="btn btn-primary btn-lg w-100" id="btn-save-tx">Salvar Lançamento</button>
-        </form>
-
-      </div>
+        <h6 class="mb-3 text-muted">Últimos Lançamentos (Casal)</h6>
+        <div id="tx-list">
+            <div class="text-center text-muted py-4">Carregando...</div>
+        </div>
     </div>
-  </div>
-</div>
 
-<script>
-    // Recupera o token de acesso salvo no navegador e redireciona para login se não existir
-    const token = localStorage.getItem('teto_token');
-    if (!token) {
-        window.location.href = '/';
-    }
+    <!-- Speed Dial -->
+    <div class="speed-dial">
+        <div class="sd-menu" id="sdMenu">
+            <button class="sd-item sd-item-saida" data-bs-toggle="modal" data-bs-target="#modalSaida"
+                onclick="toggleFab()">
+                <i class="bi bi-arrow-down-circle-fill"></i> Nova Saída
+            </button>
+            <button class="sd-item sd-item-entrada" data-bs-toggle="modal" data-bs-target="#modalEntrada"
+                onclick="toggleFab()">
+                <i class="bi bi-arrow-up-circle-fill"></i> Nova Entrada
+            </button>
+        </div>
+        <button class="fab" id="fabBtn" onclick="toggleFab()">
+            <i class="bi bi-plus"></i>
+        </button>
+    </div>
 
-    // Prepara os cabeçalhos das requisições incluindo o token de autenticação
-    const headers = {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-    };
+    <!-- Bottom Navigation -->
+    <div class="bottom-nav">
+        <a href="#" class="nav-item active"><i class="bi bi-house-door-fill"></i> Início</a>
+        <a href="/subcategorias" class="nav-item"><i class="bi bi-tags-fill"></i> Subcategorias</a>
+        <a href="#" class="nav-item"><i class="bi bi-pie-chart-fill"></i> Relatórios</a>
+    </div>
 
-    // Função utilitária para formatar valores no formato moeda real (R$)
-    const formatCurrency = (value) => {
-        return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
-    };
+    <!-- Modal Entrada -->
+    <div class="modal fade" id="modalEntrada" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title text-success"><i class="bi bi-arrow-up-circle"></i> Nova Entrada</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="alert-entrada" class="alert d-none" role="alert"></div>
+                    <form id="form-entrada">
+                        <div class="mb-3">
+                            <label class="form-label">Valor (R$)</label>
+                            <input type="number" step="0.01" class="form-control form-control-lg" id="val-entrada"
+                                placeholder="0.00" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Observação (Opcional)</label>
+                            <input type="text" class="form-control" id="obs-entrada"
+                                placeholder="Ex: Presente dos padrinhos">
+                        </div>
+                        <button type="submit" class="btn btn-success btn-lg w-100" id="btn-save-entrada">Salvar
+                            Entrada</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
 
-    // Função utilitária para exibir a data e a hora de forma legível
-    const formatDate = (dateStr) => {
-        const d = new Date(dateStr);
-        return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'});
-    };
+    <!-- Modal Saída -->
+    <div class="modal fade" id="modalSaida" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title text-danger"><i class="bi bi-arrow-down-circle"></i> Nova Saída</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="alert-saida" class="alert d-none" role="alert"></div>
+                    <form id="form-saida">
+                        <div class="mb-3">
+                            <label class="form-label">Valor (R$)</label>
+                            <input type="number" step="0.01" class="form-control form-control-lg" id="val-saida"
+                                placeholder="0.00" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Categoria (Projeto Principal)</label>
+                            <select class="form-select form-select-lg" id="cat-saida" required>
+                                <option value="" disabled selected>Selecione...</option>
+                                <option value="Casamento">Casamento</option>
+                                <option value="Apartamento">Apartamento</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Subcategoria</label>
+                            <select class="form-select form-select-lg" id="subcat-saida" required>
+                                <option value="" disabled selected>Selecione...</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Observação (Opcional)</label>
+                            <input type="text" class="form-control" id="obs-saida" placeholder="Ex: Sinal do salão">
+                        </div>
+                        <button type="submit" class="btn btn-danger btn-lg w-100" id="btn-save-saida">Salvar
+                            Saída</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
 
-    // Apaga o token de acesso e retorna o usuário à tela de login
-    const logout = () => {
-        localStorage.removeItem('teto_token');
-        window.location.href = '/';
-    };
+    <script>
+        const token = localStorage.getItem('teto_token');
+        if (!token) window.location.href = '/';
 
-    // Função responsável por carregar e renderizar os dados principais do Dashboard
-    const loadDashboard = async () => {
-        try {
-            // Faz a requisição na API
-            const res = await fetch('/dashboard', { headers });
-            if (res.status === 401) return logout(); // Se token inválido/expirado, força o logout
-            const data = await res.json();
-            
-            // Atualiza os saldos totais na interface
-            document.getElementById('val-casamento').textContent = formatCurrency(data.total_casamento);
-            document.getElementById('val-apartamento').textContent = formatCurrency(data.total_apartamento);
+        const headers = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
 
-            const txList = document.getElementById('tx-list');
-            txList.innerHTML = '';
-            
-            // Exibe mensagem se não houver transações
-            if (data.last_transactions.length === 0) {
-                txList.innerHTML = '<div class="text-center text-muted">Nenhum lançamento encontrado.</div>';
-            }
+        const formatCurrency = (value) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
+        const formatDate = (dateStr) => {
+            const d = new Date(dateStr);
+            return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        };
 
-            // Renderiza cada transação recebida
-            data.last_transactions.forEach(tx => {
-                const isReceita = tx.tipo === 'receita';
-                // Define o HTML do item verificando se é entrada (receita) ou saída (despesa)
-                const html = `
+        const logout = () => { localStorage.removeItem('teto_token'); window.location.href = '/'; };
+
+        const toggleFab = () => {
+            document.getElementById('fabBtn').classList.toggle('active');
+            document.getElementById('sdMenu').classList.toggle('open');
+        };
+
+        const loadDashboard = async () => {
+            try {
+                const res = await fetch('/dashboard', { headers });
+                if (res.status === 401) return logout();
+                const data = await res.json();
+
+                document.getElementById('val-caixa-geral').textContent = formatCurrency(data.total_geral);
+
+                const txList = document.getElementById('tx-list');
+                txList.innerHTML = '';
+
+                if (data.last_transactions.length === 0) {
+                    txList.innerHTML = '<div class="text-center text-muted">Nenhum lançamento encontrado.</div>';
+                }
+
+                data.last_transactions.forEach(tx => {
+                    const isReceita = tx.tipo === 'receita';
+                    // Render category info for expenses. Render generic "Entrada" for revenue.
+                    const categoryText = isReceita ? 'Entrada (Caixa Geral)' : `${tx.categoria} - <span class="fw-normal">${tx.category?.nome || ''}</span>`;
+
+                    const html = `
                     <div class="tx-item ${isReceita ? 'tx-receita' : 'tx-despesa'} d-flex justify-content-between align-items-center">
                         <div>
-                            <div class="fw-bold">${tx.category.nome}</div>
-                            <div class="small text-muted">${tx.goal.nome} • ${formatDate(tx.data)} • ${tx.user.nome}</div>
+                            <div class="fw-bold text-dark">${categoryText}</div>
+                            <div class="small text-muted">${formatDate(tx.data)} • ${tx.user.nome}</div>
                             ${tx.descricao ? `<div class="small mt-1">${tx.descricao}</div>` : ''}
                         </div>
                         <div class="${isReceita ? 'tx-val-receita' : 'tx-val-despesa'}">
                             ${isReceita ? '+' : '-'} ${formatCurrency(tx.valor)}
                         </div>
-                    </div>
-                `;
-                txList.innerHTML += html;
-            });
+                    </div>`;
+                    txList.innerHTML += html;
+                });
+            } catch (e) { console.error(e); }
+        };
 
-        } catch (e) {
-            console.error("Erro ao carregar o dashboard:", e);
-        }
-    };
+        const loadFormOptions = async () => {
+            try {
+                const res = await fetch('/categories', { headers });
+                const cats = await res.json();
+                const sel = document.getElementById('subcat-saida');
+                cats.forEach(c => { sel.innerHTML += `<option value="${c.id}">${c.nome}</option>`; });
+            } catch (e) { console.error(e); }
+        };
 
-    // Função responsável por preencher as opções de Metas e Categorias no formulário de Lançamento
-    const loadFormOptions = async () => {
-        try {
-            // Requisita os dados paralelamente para carregar mais rápido
-            const [goalsRes, catsRes] = await Promise.all([
-                fetch('/goals', { headers }),
-                fetch('/categories', { headers })
-            ]);
-            
-            const goals = await goalsRes.json();
-            const categories = await catsRes.json();
+        const submitTx = async (e, type) => {
+            e.preventDefault();
+            const isReceita = type === 'receita';
+            const formId = isReceita ? 'form-entrada' : 'form-saida';
+            const alertId = isReceita ? 'alert-entrada' : 'alert-saida';
+            const btnId = isReceita ? 'btn-save-entrada' : 'btn-save-saida';
+            const modalId = isReceita ? 'modalEntrada' : 'modalSaida';
 
-            // Preenche as <options> no select de Projetos/Metas
-            const goalSelect = document.getElementById('goal_id');
-            goals.forEach(g => {
-                goalSelect.innerHTML += `<option value="${g.id}">${g.nome}</option>`;
-            });
+            const btn = document.getElementById(btnId);
+            const alert = document.getElementById(alertId);
 
-            // Preenche as <options> no select de Categorias
-            const catSelect = document.getElementById('category_id');
-            categories.forEach(c => {
-                catSelect.innerHTML += `<option value="${c.id}">${c.nome}</option>`;
-            });
+            btn.disabled = true;
 
-        } catch (e) {
-            console.error("Erro ao carregar opções do formulário:", e);
-        }
-    };
+            const payload = {
+                tipo: type,
+                valor: parseFloat(document.getElementById(isReceita ? 'val-entrada' : 'val-saida').value),
+                descricao: document.getElementById(isReceita ? 'obs-entrada' : 'obs-saida').value || null
+            };
 
-    // Trata o envio do formulário de novo lançamento (Receita/Despesa)
-    document.getElementById('tx-form').addEventListener('submit', async (e) => {
-        e.preventDefault(); // Impede recarregamento da página
-        
-        const btnSave = document.getElementById('btn-save-tx');
-        const alert = document.getElementById('modal-alert');
-        
-        // Bloqueia o botão e mostra estado de carregamento
-        btnSave.disabled = true;
-        btnSave.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Salvando...';
-
-        // Coleta os valores do formulário
-        const tipo = document.querySelector('input[name="tipo"]:checked').value;
-        const valor = parseFloat(document.getElementById('valor').value);
-        const goal_id = parseInt(document.getElementById('goal_id').value);
-        const category_id = parseInt(document.getElementById('category_id').value);
-        const descricao = document.getElementById('descricao').value;
-
-        try {
-            // Envia a transação via método POST para a API
-            const res = await fetch('/transactions', {
-                method: 'POST',
-                headers,
-                body: JSON.stringify({ valor, tipo, goal_id, category_id, descricao })
-            });
-
-            if (res.ok) {
-                // Se o lançamento for registrado com sucesso, exibe uma mensagem positiva
-                alert.className = 'alert alert-success';
-                alert.textContent = 'Lançamento salvo com sucesso!';
-                
-                // Limpa os campos do formulário para próximos usos
-                document.getElementById('valor').value = '';
-                document.getElementById('descricao').value = '';
-                
-                // Atualiza o dashboard para mostrar os novos dados inseridos
-                loadDashboard();
-                
-                // Fecha o modal (tela de formulário) após 1 segundo
-                setTimeout(() => {
-                    const modal = bootstrap.Modal.getInstance(document.getElementById('newTxModal'));
-                    modal.hide();
-                    alert.className = 'alert d-none';
-                }, 1000);
-
-            } else {
-                // Em caso de erro na resposta, avisa o usuário
-                alert.className = 'alert alert-danger';
-                alert.textContent = 'Erro ao salvar lançamento.';
+            if (!isReceita) {
+                payload.categoria = document.getElementById('cat-saida').value;
+                payload.category_id = parseInt(document.getElementById('subcat-saida').value);
             }
-        } catch (e) {
-            // Em caso de erro de conexão (API offline, internet caiu)
-            alert.className = 'alert alert-danger';
-            alert.textContent = 'Erro de conexão.';
-        } finally {
-            // Libera o botão de salvar no final do processo
-            btnSave.disabled = false;
-            btnSave.textContent = 'Salvar Lançamento';
-        }
-    });
 
-    // Initialize
-    loadDashboard();
-    loadFormOptions();
+            try {
+                const res = await fetch('/transactions', { method: 'POST', headers, body: JSON.stringify(payload) });
+                if (res.ok) {
+                    alert.className = 'alert alert-success';
+                    alert.textContent = 'Lançamento salvo!';
+                    document.getElementById(formId).reset();
+                    loadDashboard();
+                    setTimeout(() => {
+                        bootstrap.Modal.getInstance(document.getElementById(modalId)).hide();
+                        alert.className = 'alert d-none';
+                    }, 1000);
+                } else {
+                    const error = await res.json();
+                    alert.className = 'alert alert-danger';
+                    alert.textContent = error.detail || 'Erro ao salvar.';
+                }
+            } catch (e) {
+                alert.className = 'alert alert-danger';
+                alert.textContent = 'Erro de conexão.';
+            } finally {
+                btn.disabled = false;
+            }
+        };
 
-</script>
+        document.getElementById('form-entrada').addEventListener('submit', (e) => submitTx(e, 'receita'));
+        document.getElementById('form-saida').addEventListener('submit', (e) => submitTx(e, 'despesa'));
 
-<!-- Bootstrap 5 JS Bundle -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+        loadDashboard();
+        loadFormOptions();
+
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
+
 </html>

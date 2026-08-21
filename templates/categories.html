@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teto & Altar - Subcategorias</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <style>
+        body { background-color: #f8f9fa; padding-bottom: 70px; }
+        .header { background-color: #ffffff; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05); }
+        .list-group-item { display: flex; justify-content: space-between; align-items: center; }
+        .bottom-nav {
+            position: fixed; bottom: 0; left: 0; width: 100%;
+            background-color: #ffffff; box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+            display: flex; justify-content: space-around; padding: 10px 0; z-index: 1000;
+        }
+        .nav-item { text-align: center; color: #6c757d; text-decoration: none; font-size: 0.85rem; }
+        .nav-item i { display: block; font-size: 1.3rem; margin-bottom: 2px; }
+        .nav-item.active { color: #0d6efd; }
+    </style>
+</head>
+<body>
+
+    <div class="header py-3 px-3 mb-4 d-flex justify-content-between align-items-center">
+        <h5 class="m-0">Subcategorias</h5>
+        <a href="/app" class="btn btn-sm btn-outline-primary"><i class="bi bi-arrow-left"></i> Voltar</a>
+    </div>
+
+    <div class="container">
+        <div id="page-alert" class="alert d-none" role="alert"></div>
+
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h6 class="m-0 text-muted">Gerenciar</h6>
+            <button class="btn btn-primary btn-sm" onclick="openModal()"><i class="bi bi-plus"></i> Nova</button>
+        </div>
+
+        <ul class="list-group" id="cat-list">
+            <div class="text-center text-muted py-4">Carregando...</div>
+        </ul>
+    </div>
+
+    <!-- Bottom Navigation -->
+    <div class="bottom-nav">
+        <a href="/app" class="nav-item">
+            <i class="bi bi-house-door-fill"></i> Início
+        </a>
+        <a href="/subcategorias" class="nav-item active">
+            <i class="bi bi-tags-fill"></i> Subcategorias
+        </a>
+        <a href="#" class="nav-item">
+            <i class="bi bi-pie-chart-fill"></i> Relatórios
+        </a>
+    </div>
+
+    <!-- Modal Form -->
+    <div class="modal fade" id="catModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="catModalLabel">Subcategoria</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="cat-form">
+                        <input type="hidden" id="cat-id">
+                        <div class="mb-3">
+                            <label class="form-label">Nome</label>
+                            <input type="text" class="form-control" id="cat-nome" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100" id="btn-save">Salvar</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const token = localStorage.getItem('teto_token');
+        if (!token) window.location.href = '/';
+
+        const headers = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
+        let modal;
+        document.addEventListener("DOMContentLoaded", () => {
+            modal = new bootstrap.Modal(document.getElementById('catModal'));
+            loadCats();
+        });
+
+        const showAlert = (msg, type) => {
+            const el = document.getElementById('page-alert');
+            el.className = `alert alert-${type}`;
+            el.textContent = msg;
+            setTimeout(() => el.classList.add('d-none'), 5000);
+        };
+
+        const loadCats = async () => {
+            const list = document.getElementById('cat-list');
+            try {
+                const res = await fetch('/categories', { headers });
+                if (res.status === 401) { localStorage.removeItem('teto_token'); window.location.href = '/'; }
+                const data = await res.json();
+                
+                if (data.length === 0) {
+                    list.innerHTML = '<li class="list-group-item text-muted justify-content-center">Nenhuma subcategoria cadastrada.</li>';
+                    return;
+                }
+
+                list.innerHTML = '';
+                data.forEach(c => {
+                    list.innerHTML += `
+                        <li class="list-group-item">
+                            <span>${c.nome}</span>
+                            <div>
+                                <button class="btn btn-sm btn-outline-secondary me-1" onclick="openModal(${c.id}, '${c.nome}')"><i class="bi bi-pencil"></i></button>
+                                <button class="btn btn-sm btn-outline-danger" onclick="deleteCat(${c.id})"><i class="bi bi-trash"></i></button>
+                            </div>
+                        </li>
+                    `;
+                });
+            } catch (e) {
+                list.innerHTML = '<li class="list-group-item text-danger">Erro ao carregar.</li>';
+            }
+        };
+
+        const openModal = (id = '', nome = '') => {
+            document.getElementById('cat-id').value = id;
+            document.getElementById('cat-nome').value = nome;
+            modal.show();
+        };
+
+        document.getElementById('cat-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('cat-id').value;
+            const nome = document.getElementById('cat-nome').value;
+            const btn = document.getElementById('btn-save');
+            
+            btn.disabled = true;
+            try {
+                const method = id ? 'PUT' : 'POST';
+                const url = id ? `/categories/${id}` : '/categories';
+                
+                const res = await fetch(url, { method, headers, body: JSON.stringify({ nome }) });
+                if (res.ok) {
+                    modal.hide();
+                    showAlert('Subcategoria salva!', 'success');
+                    loadCats();
+                } else {
+                    showAlert('Erro ao salvar.', 'danger');
+                }
+            } finally {
+                btn.disabled = false;
+            }
+        });
+
+        const deleteCat = async (id) => {
+            if (!confirm('Tem certeza que deseja apagar?')) return;
+            
+            try {
+                const res = await fetch(`/categories/${id}`, { method: 'DELETE', headers });
+                if (res.ok) {
+                    showAlert('Subcategoria apagada.', 'success');
+                    loadCats();
+                } else {
+                    const data = await res.json();
+                    // Regra de Negócio: Erro bloqueando exclusão
+                    showAlert(data.detail || 'Erro ao apagar.', 'danger');
+                }
+            } catch (e) {
+                showAlert('Erro de conexão.', 'danger');
+            }
+        };
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

@@ -21,28 +21,24 @@ class UserOut(UserBase):
     class Config:
         from_attributes = True
 
-# Goal Schemas
-class GoalOut(BaseModel):
-    id: int
+# Category Schemas (Subcategoria no frontend)
+class CategoryCreate(BaseModel):
     nome: str
-    valor_objetivo: float
-    class Config:
-        from_attributes = True
 
-# Category Schemas
 class CategoryOut(BaseModel):
     id: int
     nome: str
     class Config:
         from_attributes = True
 
+
 # Transaction Schemas
 class TransactionCreate(BaseModel):
     valor: float
     tipo: TransactionType
     descricao: Optional[str] = None
-    category_id: int
-    goal_id: int
+    categoria: Optional[str] = None
+    category_id: Optional[int] = None
 
 class TransactionOut(BaseModel):
     id: int
@@ -51,13 +47,12 @@ class TransactionOut(BaseModel):
     data: datetime
     descricao: Optional[str]
     user: UserOut
-    category: CategoryOut
-    goal: GoalOut
+    categoria: Optional[str] = None
+    category: Optional[CategoryOut] = None
     class Config:
         from_attributes = True
 
 # Dashboard Schemas
 class DashboardSummary(BaseModel):
-    total_casamento: float
-    total_apartamento: float
+    total_geral: float
     last_transactions: List[TransactionOut]

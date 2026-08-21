@@ -23,22 +23,11 @@ class User(Base):
     transactions = relationship("Transaction", back_populates="user")
 
 
-class Goal(Base):
-    __tablename__ = "goals"
-
-    id = Column(Integer, primary_key=True, index=True)
-    nome = Column(String(50), nullable=False) # Casamento ou Apartamento
-    valor_objetivo = Column(Float, nullable=False)
-
-    transactions = relationship("Transaction", back_populates="goal")
-
-
 class Category(Base):
     __tablename__ = "categories"
 
     id = Column(Integer, primary_key=True, index=True)
     nome = Column(String(50), nullable=False)
-    goal_id = Column(Integer, ForeignKey("goals.id"), nullable=True)
 
     transactions = relationship("Transaction", back_populates="category")
 
@@ -52,10 +41,12 @@ class Transaction(Base):
     data = Column(DateTime, default=get_br_time, nullable=False)
     descricao = Column(String(255), nullable=True)
     
+    # Nova coluna para a Categoria Principal do gasto ('Casamento' ou 'Apartamento')
+    categoria = Column(String(50), nullable=True)
+
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    category_id = Column(Integer, ForeignKey("categories.id"), nullable=False)
-    goal_id = Column(Integer, ForeignKey("goals.id"), nullable=False)
+    # Aqui é a "Subcategoria"
+    category_id = Column(Integer, ForeignKey("categories.id"), nullable=True)
 
     user = relationship("User", back_populates="transactions")
     category = relationship("Category", back_populates="transactions")
-    goal = relationship("Goal", back_populates="transactions")

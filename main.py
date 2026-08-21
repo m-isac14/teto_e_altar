@@ -37,6 +37,11 @@ async def dashboard_page(request: Request):
     """Renderiza a página principal do dashboard (dashboard.html) após o login."""
     return templates.TemplateResponse("dashboard.html", {"request": request})
 
+@app.get("/subcategorias", response_class=HTMLResponse)
+async def subcategories_page(request: Request):
+    """Renderiza a página de gestão de subcategorias (categories.html)."""
+    return templates.TemplateResponse("categories.html", {"request": request})
+
 # ==========================================
 # Rotas da API (Backend)
 # ==========================================
@@ -69,14 +74,21 @@ def create_transaction(
     current_user: models.User = Depends(auth.get_current_user)
 ):
     """Cria uma nova transação (receita ou despesa) associada ao usuário autenticado."""
-    # Verifica se a categoria e a meta (goal) existem
-    cat = db.query(models.Category).filter(models.Category.id == transaction.category_id).first()
-    goal = db.query(models.Goal).filter(models.Goal.id == transaction.goal_id).first()
-    
-    if not cat:
-        raise HTTPException(status_code=400, detail="Categoria não encontrada")
-    if not goal:
-        raise HTTPException(status_code=400, detail="Meta (Goal) não encontrada")
+    # Se for despesa, é obrigatório ter Categoria Principal e Subcategoria
+    if transaction.tipo == models.TransactionType.despesa:
+        if not transaction.category_id or not transaction.categoria:
+            raise HTTPException(status_code=400, detail="Categoria e Subcategoria são obrigatórias para despesas.")
+        
+        cat = db.query(models.Category).filter(models.Category.id == transaction.category_id).first()
+        if not cat:
+            raise HTTPException(status_code=400, detail="Subcategoria não encontrada")
+            
+        if transaction.categoria not in ["Casamento", "Apartamento"]:
+            raise HTTPException(status_code=400, detail="Categoria Principal inválida")
+    else:
+        # Se for receita, forçamos null nestes campos
+        transaction.categoria = None
+        transaction.category_id = None
     
     # Prepara o modelo da transação e o salva no banco
     db_transaction = models.Transaction(
@@ -85,7 +97,7 @@ def create_transaction(
         descricao=transaction.descricao,
         user_id=current_user.id,
         category_id=transaction.category_id,
-        goal_id=transaction.goal_id
+        categoria=transaction.categoria
     )
     db.add(db_transaction)
     db.commit()
@@ -95,46 +107,62 @@ def create_transaction(
 
 @app.get("/dashboard", response_model=schemas.DashboardSummary)
 def get_dashboard_summary(db: Session = Depends(get_db), current_user: models.User = Depends(auth.get_current_user)):
-    """Obtém um resumo do dashboard: saldo das metas principais e as últimas transações realizadas."""
-    # Pega Metas principais (Casamento e Apartamento)
-    casamento_goal = db.query(models.Goal).filter(models.Goal.nome == "Casamento").first()
-    apartamento_goal = db.query(models.Goal).filter(models.Goal.nome == "Apartamento").first()
+    """Obtém um resumo do dashboard: saldo do Caixa Geral e as últimas transações realizadas."""
+    
+    # Calcula o saldo geral do Caixa Único
+    receitas = db.query(func.sum(models.Transaction.valor)).filter(
+        models.Transaction.tipo == models.TransactionType.receita
+    ).scalar() or 0.0
+    
+    despesas = db.query(func.sum(models.Transaction.valor)).filter(
+        models.Transaction.tipo == models.TransactionType.despesa
+    ).scalar() or 0.0
+    
+    total_geral = receitas - despesas
 
-    # Função auxiliar para calcular saldo de uma meta (Receitas - Despesas)
-    def calcular_saldo(goal_id):
-        if not goal_id: return 0.0
-        
-        receitas = db.query(func.sum(models.Transaction.valor)).filter(
-            models.Transaction.goal_id == goal_id,
-            models.Transaction.tipo == models.TransactionType.receita
-        ).scalar() or 0.0
-        
-        despesas = db.query(func.sum(models.Transaction.valor)).filter(
-            models.Transaction.goal_id == goal_id,
-            models.Transaction.tipo == models.TransactionType.despesa
-        ).scalar() or 0.0
-        
-        return receitas - despesas
-
-    # Calcula os totais das metas principais
-    total_casamento = calcular_saldo(casamento_goal.id if casamento_goal else None)
-    total_apartamento = calcular_saldo(apartamento_goal.id if apartamento_goal else None)
-
-    # Últimas 10 transações conjuntas (independentemente de quem lançou, são todas do casal)
+    # Últimas 10 transações conjuntas
     last_transactions = db.query(models.Transaction).order_by(models.Transaction.data.desc()).limit(10).all()
 
     return schemas.DashboardSummary(
-        total_casamento=total_casamento,
-        total_apartamento=total_apartamento,
+        total_geral=total_geral,
         last_transactions=last_transactions
     )
 
 @app.get("/categories", response_model=List[schemas.CategoryOut])
 def get_categories(db: Session = Depends(get_db), current_user: models.User = Depends(auth.get_current_user)):
-    """Retorna todas as categorias disponíveis no banco de dados para os selects."""
+    """Retorna todas as subcategorias disponíveis no banco de dados para os selects e CRUD."""
     return db.query(models.Category).all()
 
-@app.get("/goals", response_model=List[schemas.GoalOut])
-def get_goals(db: Session = Depends(get_db), current_user: models.User = Depends(auth.get_current_user)):
-    """Retorna todas as metas (projetos) disponíveis no banco de dados."""
-    return db.query(models.Goal).all()
+@app.post("/categories", response_model=schemas.CategoryOut)
+def create_category(category: schemas.CategoryCreate, db: Session = Depends(get_db), current_user: models.User = Depends(auth.get_current_user)):
+    db_cat = models.Category(nome=category.nome)
+    db.add(db_cat)
+    db.commit()
+    db.refresh(db_cat)
+    return db_cat
+
+@app.put("/categories/{cat_id}", response_model=schemas.CategoryOut)
+def update_category(cat_id: int, category: schemas.CategoryCreate, db: Session = Depends(get_db), current_user: models.User = Depends(auth.get_current_user)):
+    db_cat = db.query(models.Category).filter(models.Category.id == cat_id).first()
+    if not db_cat:
+        raise HTTPException(status_code=404, detail="Subcategoria não encontrada")
+    
+    db_cat.nome = category.nome
+    db.commit()
+    db.refresh(db_cat)
+    return db_cat
+
+@app.delete("/categories/{cat_id}")
+def delete_category(cat_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(auth.get_current_user)):
+    db_cat = db.query(models.Category).filter(models.Category.id == cat_id).first()
+    if not db_cat:
+        raise HTTPException(status_code=404, detail="Subcategoria não encontrada")
+        
+    # Block deletion if transactions are linked
+    tx_count = db.query(models.Transaction).filter(models.Transaction.category_id == cat_id).count()
+    if tx_count > 0:
+        raise HTTPException(status_code=400, detail=f"Esta subcategoria não pode ser apagada pois possui {tx_count} gastos.")
+        
+    db.delete(db_cat)
+    db.commit()
+    return {"ok": True}
