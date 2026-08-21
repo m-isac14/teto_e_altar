@@ -380,13 +380,19 @@
                         alert.className = 'alert d-none';
                     }, 1000);
                 } else {
-                    const error = await res.json();
+                    let errorMsg = 'Erro ao salvar.';
+                    try {
+                        const error = await res.json();
+                        errorMsg = error.detail || errorMsg;
+                    } catch (jsonError) {
+                        errorMsg = `Erro no servidor (Status ${res.status}). Verifique os logs do back-end.`;
+                    }
                     alert.className = 'alert alert-danger';
-                    alert.textContent = error.detail || 'Erro ao salvar.';
+                    alert.textContent = errorMsg;
                 }
             } catch (e) {
                 alert.className = 'alert alert-danger';
-                alert.textContent = 'Erro de conexão.';
+                alert.textContent = 'Erro de conexão: O servidor pode estar indisponível.';
             } finally {
                 btn.disabled = false;
             }
