@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    {% include 'head.html' %}
+    <title>Teto & Altar - Relatórios</title>
+
+    <style>
+        body {
+            background-color: #f8f9fa;
+            padding-bottom: 70px;
+        }
+
+        .header {
+            background-color: #ffffff;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+            width: 100%;
+        }
+
+        .doughnut-container {
+            position: relative;
+            height: 350px;
+            width: 100%;
+        }
+        
+        .card-custom {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+            margin-bottom: 1.5rem;
+            transition: transform 0.2s ease-in-out;
+        }
+
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background-color: #ffffff;
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-around;
+            padding: 10px 0;
+            z-index: 1000;
+        }
+
+        .nav-item {
+            text-align: center;
+            color: #6c757d;
+            text-decoration: none;
+            font-size: 0.85rem;
+        }
+
+        .nav-item i {
+            display: block;
+            font-size: 1.3rem;
+            margin-bottom: 2px;
+        }
+
+        .nav-item.active {
+            color: #0d6efd;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="header py-3 px-3 mb-4 d-flex justify-content-between align-items-center">
+        <h5 class="m-0">Dashboard Financeiro</h5>
+        <a href="/app" class="btn btn-sm btn-outline-primary"><i class="bi bi-arrow-left"></i> Voltar</a>
+    </div>
+
+    <div class="container mb-5">
+        
+        <!-- Filtro de Período -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="d-flex align-items-center bg-white p-3 rounded shadow-sm">
+                    <i class="bi bi-calendar-week fs-4 me-3 text-primary"></i>
+                    <div class="flex-grow-1">
+                        <label for="period-filter" class="form-label mb-0 small text-muted">Filtrar por período</label>
+                        <select class="form-select border-0 shadow-none fw-bold p-0" id="period-filter" onchange="loadReports()">
+                            <option value="30d" selected>Últimos 30 dias</option>
+                            <option value="year">Este Ano</option>
+                            <option value="all">Todos os tempos</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Alertas -->
+        <div id="page-alert" class="alert d-none" role="alert"></div>
+
+        <!-- Gráfico 1: Evolução do Saldo Geral -->
+        <div class="card card-custom p-3">
+            <div class="card-body">
+                <h6 class="card-title text-muted mb-3"><i class="bi bi-graph-up-arrow"></i> Evolução do Saldo Geral</h6>
+                <div class="chart-container">
+                    <canvas id="evolutionChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Gráfico 2: Fluxo de Caixa -->
+        <div class="card card-custom p-3">
+            <div class="card-body">
+                <h6 class="card-title text-muted mb-3"><i class="bi bi-bar-chart-line"></i> Fluxo de Caixa Mensal</h6>
+                <div class="chart-container">
+                    <canvas id="cashflowChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Gráfico 3: Distribuição de Gastos -->
+        <div class="card card-custom p-3">
+            <div class="card-body">
+                <h6 class="card-title text-muted mb-3"><i class="bi bi-pie-chart"></i> Distribuição de Gastos</h6>
+                <div class="doughnut-container">
+                    <canvas id="distributionChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Bottom Navigation -->
+    <div class="bottom-nav">
+        <a href="/app" class="nav-item">
+            <i class="bi bi-house-door-fill"></i> Início
+        </a>
+        <a href="/subcategorias" class="nav-item">
+            <i class="bi bi-tags-fill"></i> Subcategorias
+        </a>
+        <a href="/logs" class="nav-item">
+            <i class="bi bi-journal-text"></i> Logs
+        </a>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+        const token = localStorage.getItem('teto_token');
+        if (!token) window.location.href = '/';
+        const headers = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
+
+        // Variáveis globais para os gráficos
+        let evolutionChart = null;
+        let cashflowChart = null;
+        let distributionChart = null;
+
+        // Custom tooltip para o gráfico de Distribuição para exibir subcategorias
+        const getCustomTooltipConfig = (subcategoriesData) => {
+            return {
+                callbacks: {
+                    label: function(context) {
+                        let label = context.label || '';
+                        if (label) label += ': ';
+                        if (context.parsed !== null) {
+                            label += new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(context.parsed);
+                        }
+                        return label;
+                    },
+                    afterBody: function(context) {
+                        const dataIndex = context[0].dataIndex;
+                        const label = context[0].label; // ex: Casamento ou Apartamento
+                        const subcats = subcategoriesData[label];
+                        
+                        if (subcats && subcats.length > 0) {
+                            let bodyLines = ['','Detalhes (Subcategorias):'];
+                            subcats.forEach(sub => {
+                                const valorFmt = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(sub.valor);
+                                bodyLines.push(`• ${sub.nome}: ${valorFmt}`);
+                            });
+                            return bodyLines;
+                        }
+                        return [];
+                    }
+                }
+            };
+        };
+
+        const loadReports = async () => {
+            const period = document.getElementById('period-filter').value;
+            const alertEl = document.getElementById('page-alert');
+
+            try {
+                const res = await fetch(`/api/reports?period=${period}`, { headers });
+                if (res.status === 401) { localStorage.removeItem('teto_token'); window.location.href = '/'; }
+                const data = await res.json();
+
+                renderEvolutionChart(data.evolution);
+                renderCashflowChart(data.cashflow);
+                renderDistributionChart(data.distribution);
+                
+            } catch (e) {
+                console.error(e);
+                alertEl.className = 'alert alert-danger';
+                alertEl.textContent = 'Erro ao carregar dados do relatório.';
+                alertEl.classList.remove('d-none');
+            }
+        };
+
+        const renderEvolutionChart = (data) => {
+            const ctx = document.getElementById('evolutionChart').getContext('2d');
+            
+            // Gradient fill for premium look
+            const gradient = ctx.createLinearGradient(0, 0, 0, 300);
+            gradient.addColorStop(0, 'rgba(13, 110, 253, 0.4)');
+            gradient.addColorStop(1, 'rgba(13, 110, 253, 0.0)');
+
+            if (evolutionChart) {
+                evolutionChart.data.labels = data.labels;
+                evolutionChart.data.datasets[0].data = data.data;
+                evolutionChart.update({duration: 800, easing: 'easeOutQuart'});
+            } else {
+                evolutionChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: data.labels,
+                        datasets: [{
+                            label: 'Saldo Acumulado',
+                            data: data.data,
+                            borderColor: '#0d6efd',
+                            backgroundColor: gradient,
+                            borderWidth: 3,
+                            fill: true,
+                            tension: 0.4, // smooth curves
+                            pointBackgroundColor: '#ffffff',
+                            pointBorderColor: '#0d6efd',
+                            pointRadius: 4,
+                            pointHoverRadius: 6
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                callbacks: {
+                                    label: (ctx) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(ctx.raw)
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: false,
+                                grid: { color: 'rgba(0, 0, 0, 0.05)' }
+                            },
+                            x: {
+                                grid: { display: false }
+                            }
+                        }
+                    }
+                });
+            }
+        };
+
+        const renderCashflowChart = (data) => {
+            const ctx = document.getElementById('cashflowChart').getContext('2d');
+
+            if (cashflowChart) {
+                cashflowChart.data.labels = data.labels;
+                cashflowChart.data.datasets[0].data = data.entradas;
+                cashflowChart.data.datasets[1].data = data.saidas;
+                cashflowChart.update({duration: 800, easing: 'easeOutQuart'});
+            } else {
+                cashflowChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: data.labels,
+                        datasets: [
+                            {
+                                label: 'Entradas',
+                                data: data.entradas,
+                                backgroundColor: '#198754',
+                                borderRadius: 4,
+                                barPercentage: 0.6
+                            },
+                            {
+                                label: 'Saídas',
+                                data: data.saidas,
+                                backgroundColor: '#dc3545',
+                                borderRadius: 4,
+                                barPercentage: 0.6
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: {
+                            mode: 'index',
+                            intersect: false,
+                        },
+                        plugins: {
+                            legend: { position: 'bottom' },
+                            tooltip: {
+                                callbacks: {
+                                    label: (ctx) => `${ctx.dataset.label}: ` + new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(ctx.raw)
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                grid: { color: 'rgba(0, 0, 0, 0.05)' }
+                            },
+                            x: {
+                                grid: { display: false }
+                            }
+                        }
+                    }
+                });
+            }
+        };
+
+        const renderDistributionChart = (data) => {
+            const ctx = document.getElementById('distributionChart').getContext('2d');
+
+            if (distributionChart) {
+                distributionChart.data.labels = data.labels;
+                distributionChart.data.datasets[0].data = data.data;
+                distributionChart.options.plugins.tooltip = getCustomTooltipConfig(data.subcategories);
+                distributionChart.update({duration: 800, easing: 'easeOutQuart'});
+            } else {
+                distributionChart = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: data.labels,
+                        datasets: [{
+                            data: data.data,
+                            backgroundColor: [
+                                '#0d6efd', // Casamento (Blue)
+                                '#ffc107', // Apartamento (Yellow)
+                                '#6f42c1', // Outros (Purple)
+                                '#20c997'
+                            ],
+                            borderWidth: 2,
+                            borderColor: '#ffffff',
+                            hoverOffset: 6
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        cutout: '65%',
+                        plugins: {
+                            legend: { position: 'bottom' },
+                            tooltip: getCustomTooltipConfig(data.subcategories)
+                        }
+                    }
+                });
+            }
+        };
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', loadReports);
+
+    </script>
+</body>
+</html>
