@@ -56,3 +56,15 @@ class TransactionOut(BaseModel):
 class DashboardSummary(BaseModel):
     total_geral: float
     last_transactions: List[TransactionOut]
+
+# Audit Log Schemas
+class AuditLogOut(BaseModel):
+    id: int
+    data: datetime
+    user: UserOut
+    acao: str
+    entidade: str
+    detalhes: Optional[str]
+    
+    class Config:
+        from_attributes = True

@@ -42,6 +42,24 @@ async def subcategories_page(request: Request):
     """Renderiza a página de gestão de subcategorias (categories.html)."""
     return templates.TemplateResponse("categories.html", {"request": request})
 
+@app.get("/logs", response_class=HTMLResponse)
+async def logs_page(request: Request):
+    """Renderiza a página de logs (logs.html)."""
+    return templates.TemplateResponse("logs.html", {"request": request})
+
+# ==========================================
+# Funções Utilitárias
+# ==========================================
+def create_log(db: Session, user_id: int, acao: str, entidade: str, detalhes: str = None):
+    db_log = models.AuditLog(
+        user_id=user_id,
+        acao=acao,
+        entidade=entidade,
+        detalhes=detalhes
+    )
+    db.add(db_log)
+    db.commit()
+
 # ==========================================
 # Rotas da API (Backend)
 # ==========================================
@@ -102,6 +120,13 @@ def create_transaction(
     db.add(db_transaction)
     db.commit()
     db.refresh(db_transaction)
+    
+    # Registra o log
+    create_log(
+        db, current_user.id, "CRIAR", "Transação",
+        f"Criou {transaction.tipo.value} no valor de R$ {transaction.valor:.2f}"
+    )
+    
     return db_transaction
 
 
@@ -139,6 +164,8 @@ def create_category(category: schemas.CategoryCreate, db: Session = Depends(get_
     db.add(db_cat)
     db.commit()
     db.refresh(db_cat)
+    
+    create_log(db, current_user.id, "CRIAR", "Subcategoria", f"Criou a subcategoria '{db_cat.nome}'")
     return db_cat
 
 @app.put("/categories/{cat_id}", response_model=schemas.CategoryOut)
@@ -147,9 +174,12 @@ def update_category(cat_id: int, category: schemas.CategoryCreate, db: Session =
     if not db_cat:
         raise HTTPException(status_code=404, detail="Subcategoria não encontrada")
     
+    nome_antigo = db_cat.nome
     db_cat.nome = category.nome
     db.commit()
     db.refresh(db_cat)
+    
+    create_log(db, current_user.id, "EDITAR", "Subcategoria", f"Alterou subcategoria de '{nome_antigo}' para '{db_cat.nome}'")
     return db_cat
 
 @app.delete("/categories/{cat_id}")
@@ -163,6 +193,15 @@ def delete_category(cat_id: int, db: Session = Depends(get_db), current_user: mo
     if tx_count > 0:
         raise HTTPException(status_code=400, detail=f"Esta subcategoria não pode ser apagada pois possui {tx_count} gastos.")
         
+    nome_apagado = db_cat.nome
     db.delete(db_cat)
     db.commit()
+    
+    create_log(db, current_user.id, "EXCLUIR", "Subcategoria", f"Apagou a subcategoria '{nome_apagado}'")
     return {"ok": True}
+
+@app.get("/api/logs", response_model=List[schemas.AuditLogOut])
+def get_audit_logs(db: Session = Depends(get_db), current_user: models.User = Depends(auth.get_current_user)):
+    """Retorna o histórico de logs de auditoria do sistema."""
+    logs = db.query(models.AuditLog).order_by(models.AuditLog.data.desc()).all()
+    return logs

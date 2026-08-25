@@ -21,6 +21,20 @@ class User(Base):
     senha_hash = Column(String(255), nullable=False)
 
     transactions = relationship("Transaction", back_populates="user")
+    audit_logs = relationship("AuditLog", back_populates="user", cascade="all, delete-orphan")
+
+
+class AuditLog(Base):
+    __tablename__ = "audit_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    data = Column(DateTime, default=get_br_time, nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    acao = Column(String(50), nullable=False) # e.g., CRIAR, EDITAR, EXCLUIR
+    entidade = Column(String(50), nullable=False) # e.g., Transação, Subcategoria
+    detalhes = Column(String(500), nullable=True) # Resumo do que foi alterado
+    
+    user = relationship("User", back_populates="audit_logs")
 
 
 class Category(Base):

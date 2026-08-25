@@ -1,4 +1,4 @@
-from main import app
+# from main import app
 from database import SessionLocal
 import models
 import auth
