@@ -40,6 +40,12 @@ class TransactionCreate(BaseModel):
     categoria: Optional[str] = None
     category_id: Optional[int] = None
 
+class TransactionUpdate(BaseModel):
+    valor: Optional[float] = None
+    descricao: Optional[str] = None
+    categoria: Optional[str] = None
+    category_id: Optional[int] = None
+
 class TransactionOut(BaseModel):
     id: int
     valor: float

@@ -138,6 +138,12 @@
             padding: 15px;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
             border-left: 5px solid transparent;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+
+        .tx-item:hover {
+            background-color: #f1f3f5;
         }
 
         .tx-receita {
@@ -276,6 +282,52 @@
             </div>
         </div>
     </div>
+    
+    <!-- Modal Edição -->
+    <div class="modal fade" id="modalEditar" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-pencil-square"></i> Editar Lançamento</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="alert-editar" class="alert d-none" role="alert"></div>
+                    <form id="form-editar">
+                        <input type="hidden" id="edit-id">
+                        <input type="hidden" id="edit-tipo">
+                        <div class="mb-3">
+                            <label class="form-label">Valor (R$)</label>
+                            <input type="number" step="0.01" class="form-control form-control-lg" id="val-editar"
+                                placeholder="0.00" required>
+                        </div>
+                        <div class="mb-3" id="edit-cat-container">
+                            <label class="form-label">Categoria (Projeto Principal)</label>
+                            <select class="form-select form-select-lg" id="cat-editar">
+                                <option value="" disabled selected>Selecione...</option>
+                                <option value="Casamento">Casamento</option>
+                                <option value="Apartamento">Apartamento</option>
+                            </select>
+                        </div>
+                        <div class="mb-3" id="edit-subcat-container">
+                            <label class="form-label">Subcategoria</label>
+                            <select class="form-select form-select-lg" id="subcat-editar">
+                                <option value="" disabled selected>Selecione...</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Observação (Opcional)</label>
+                            <input type="text" class="form-control" id="obs-editar" placeholder="Opcional">
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary btn-lg flex-grow-1" id="btn-save-editar">Salvar</button>
+                            <button type="button" class="btn btn-danger btn-lg px-4" id="btn-delete-editar" onclick="deleteTx()"><i class="bi bi-trash-fill"></i></button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <script>
         const token = localStorage.getItem('teto_token');
@@ -296,6 +348,8 @@
             document.getElementById('sdMenu').classList.toggle('open');
         };
 
+        window.txData = {};
+
         const loadDashboard = async () => {
             try {
                 const res = await fetch('/dashboard', { headers });
@@ -306,18 +360,20 @@
 
                 const txList = document.getElementById('tx-list');
                 txList.innerHTML = '';
+                window.txData = {};
 
                 if (data.last_transactions.length === 0) {
                     txList.innerHTML = '<div class="text-center text-muted">Nenhum lançamento encontrado.</div>';
                 }
 
                 data.last_transactions.forEach(tx => {
+                    window.txData[tx.id] = tx;
                     const isReceita = tx.tipo === 'receita';
                     // Render category info for expenses. Render generic "Entrada" for revenue.
                     const categoryText = isReceita ? 'Entrada (Caixa Geral)' : `${tx.categoria} - <span class="fw-normal">${tx.category?.nome || ''}</span>`;
 
                     const html = `
-                    <div class="tx-item ${isReceita ? 'tx-receita' : 'tx-despesa'} d-flex justify-content-between align-items-center">
+                    <div class="tx-item ${isReceita ? 'tx-receita' : 'tx-despesa'} d-flex justify-content-between align-items-center" onclick="openEditModal(${tx.id})">
                         <div>
                             <div class="fw-bold text-dark">${categoryText}</div>
                             <div class="small text-muted">${formatDate(tx.data)} • ${tx.user.nome}</div>
@@ -336,8 +392,12 @@
             try {
                 const res = await fetch('/categories', { headers });
                 const cats = await res.json();
-                const sel = document.getElementById('subcat-saida');
-                cats.forEach(c => { sel.innerHTML += `<option value="${c.id}">${c.nome}</option>`; });
+                const selSaida = document.getElementById('subcat-saida');
+                const selEditar = document.getElementById('subcat-editar');
+                cats.forEach(c => { 
+                    selSaida.innerHTML += `<option value="${c.id}">${c.nome}</option>`; 
+                    selEditar.innerHTML += `<option value="${c.id}">${c.nome}</option>`; 
+                });
             } catch (e) { console.error(e); }
         };
 
@@ -397,6 +457,118 @@
 
         document.getElementById('form-entrada').addEventListener('submit', (e) => submitTx(e, 'receita'));
         document.getElementById('form-saida').addEventListener('submit', (e) => submitTx(e, 'despesa'));
+
+        const openEditModal = (id) => {
+            const tx = window.txData[id];
+            if (!tx) return;
+
+            document.getElementById('edit-id').value = tx.id;
+            document.getElementById('edit-tipo').value = tx.tipo;
+            document.getElementById('val-editar').value = tx.valor;
+            document.getElementById('obs-editar').value = tx.descricao || '';
+
+            const isReceita = tx.tipo === 'receita';
+            document.getElementById('edit-cat-container').style.display = isReceita ? 'none' : 'block';
+            document.getElementById('edit-subcat-container').style.display = isReceita ? 'none' : 'block';
+
+            if (!isReceita) {
+                document.getElementById('cat-editar').value = tx.categoria || '';
+                document.getElementById('subcat-editar').value = tx.category_id || '';
+            }
+
+            document.getElementById('alert-editar').className = 'alert d-none';
+            new bootstrap.Modal(document.getElementById('modalEditar')).show();
+        };
+
+        document.getElementById('form-editar').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('edit-id').value;
+            const tipo = document.getElementById('edit-tipo').value;
+            const btn = document.getElementById('btn-save-editar');
+            const alert = document.getElementById('alert-editar');
+            const isReceita = tipo === 'receita';
+
+            btn.disabled = true;
+
+            const payload = {
+                valor: parseFloat(document.getElementById('val-editar').value),
+                descricao: document.getElementById('obs-editar').value || null
+            };
+
+            if (!isReceita) {
+                payload.categoria = document.getElementById('cat-editar').value;
+                payload.category_id = parseInt(document.getElementById('subcat-editar').value);
+            }
+
+            try {
+                const res = await fetch(`/transactions/${id}`, { method: 'PUT', headers, body: JSON.stringify(payload) });
+                if (res.ok) {
+                    alert.className = 'alert alert-success';
+                    alert.textContent = 'Lançamento atualizado!';
+                    loadDashboard();
+                    setTimeout(() => {
+                        bootstrap.Modal.getInstance(document.getElementById('modalEditar')).hide();
+                        alert.className = 'alert d-none';
+                    }, 1000);
+                } else {
+                    let errorMsg = 'Erro ao atualizar.';
+                    try {
+                        const error = await res.json();
+                        errorMsg = error.detail || errorMsg;
+                    } catch (jsonError) {
+                        errorMsg = `Erro no servidor (Status ${res.status}). Verifique os logs do back-end.`;
+                    }
+                    alert.className = 'alert alert-danger';
+                    alert.textContent = errorMsg;
+                }
+            } catch (e) {
+                alert.className = 'alert alert-danger';
+                alert.textContent = 'Erro de conexão: O servidor pode estar indisponível.';
+            } finally {
+                btn.disabled = false;
+            }
+        });
+
+        const deleteTx = async () => {
+            const id = document.getElementById('edit-id').value;
+            if (!id) return;
+            
+            if (!confirm('Deseja realmente excluir este lançamento? Esta ação não pode ser desfeita.')) {
+                return;
+            }
+
+            const btn = document.getElementById('btn-delete-editar');
+            const alert = document.getElementById('alert-editar');
+            btn.disabled = true;
+
+            try {
+                const res = await fetch(`/transactions/${id}`, { method: 'DELETE', headers });
+                if (res.ok) {
+                    alert.className = 'alert alert-success';
+                    alert.textContent = 'Lançamento excluído!';
+                    loadDashboard();
+                    setTimeout(() => {
+                        bootstrap.Modal.getInstance(document.getElementById('modalEditar')).hide();
+                        alert.className = 'alert d-none';
+                    }, 1000);
+                } else {
+                    let errorMsg = 'Erro ao excluir.';
+                    try {
+                        const error = await res.json();
+                        errorMsg = error.detail || errorMsg;
+                    } catch (jsonError) {
+                        errorMsg = `Erro no servidor (Status ${res.status}). Verifique os logs do back-end.`;
+                    }
+                    alert.className = 'alert alert-danger';
+                    alert.textContent = errorMsg;
+                }
+            } catch (e) {
+                alert.className = 'alert alert-danger';
+                alert.textContent = 'Erro de conexão: O servidor pode estar indisponível.';
+            } finally {
+                btn.disabled = false;
+            }
+        };
 
         loadDashboard();
         loadFormOptions();

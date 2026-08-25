@@ -129,6 +129,72 @@ def create_transaction(
     
     return db_transaction
 
+@app.put("/transactions/{tx_id}", response_model=schemas.TransactionOut)
+def update_transaction(tx_id: int, transaction_update: schemas.TransactionUpdate, db: Session = Depends(get_db), current_user: models.User = Depends(auth.get_current_user)):
+    db_transaction = db.query(models.Transaction).filter(models.Transaction.id == tx_id).first()
+    if not db_transaction:
+        raise HTTPException(status_code=404, detail="Transação não encontrada")
+        
+    old_valor = db_transaction.valor
+    old_descricao = db_transaction.descricao
+    old_categoria = db_transaction.categoria
+    old_category_id = db_transaction.category_id
+
+    if transaction_update.valor is not None:
+        db_transaction.valor = transaction_update.valor
+    if transaction_update.descricao is not None:
+        db_transaction.descricao = transaction_update.descricao
+        
+    if db_transaction.tipo == models.TransactionType.despesa:
+        if transaction_update.categoria is not None:
+            if transaction_update.categoria not in ["Casamento", "Apartamento"]:
+                raise HTTPException(status_code=400, detail="Categoria Principal inválida")
+            db_transaction.categoria = transaction_update.categoria
+        if transaction_update.category_id is not None:
+            cat = db.query(models.Category).filter(models.Category.id == transaction_update.category_id).first()
+            if not cat:
+                raise HTTPException(status_code=400, detail="Subcategoria não encontrada")
+            db_transaction.category_id = transaction_update.category_id
+            
+    db.commit()
+    db.refresh(db_transaction)
+    
+    # Montar log de alterações
+    alteracoes = []
+    if old_valor != db_transaction.valor: alteracoes.append(f"valor de R$ {old_valor:.2f} para R$ {db_transaction.valor:.2f}")
+    if old_descricao != db_transaction.descricao: alteracoes.append(f"descrição de '{old_descricao}' para '{db_transaction.descricao}'")
+    if old_categoria != db_transaction.categoria: alteracoes.append(f"projeto de '{old_categoria}' para '{db_transaction.categoria}'")
+    if old_category_id != db_transaction.category_id: alteracoes.append(f"subcategoria ID de {old_category_id} para {db_transaction.category_id}")
+    
+    detalhes = f"Alterou {db_transaction.tipo.value}: " + ", ".join(alteracoes) if alteracoes else "Nenhuma alteração registrada."
+    
+    create_log(
+        db, current_user.id, "EDITAR", "Transação",
+        detalhes[:500]
+    )
+    
+    return db_transaction
+
+@app.delete("/transactions/{tx_id}")
+def delete_transaction(tx_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(auth.get_current_user)):
+    db_transaction = db.query(models.Transaction).filter(models.Transaction.id == tx_id).first()
+    if not db_transaction:
+        raise HTTPException(status_code=404, detail="Transação não encontrada")
+        
+    tipo = db_transaction.tipo.value
+    valor = db_transaction.valor
+    descricao = db_transaction.descricao or "Sem descrição"
+    
+    db.delete(db_transaction)
+    db.commit()
+    
+    create_log(
+        db, current_user.id, "EXCLUIR", "Transação",
+        f"Excluiu {tipo} no valor de R$ {valor:.2f} ({descricao})"
+    )
+    
+    return {"ok": True}
+
 
 @app.get("/dashboard", response_model=schemas.DashboardSummary)
 def get_dashboard_summary(db: Session = Depends(get_db), current_user: models.User = Depends(auth.get_current_user)):
