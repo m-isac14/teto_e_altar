@@ -152,11 +152,11 @@
                 data.forEach(log => {
                     const tr = document.createElement('tr');
                     tr.innerHTML = `
-                        <td data-sort="\${log.data}">\${formatDate(log.data)}</td>
-                        <td>\${log.user.nome}</td>
-                        <td><span class="badge \${getBadgeClass(log.acao)}">\${log.acao}</span></td>
-                        <td>\${log.entidade}</td>
-                        <td>\${log.detalhes || '-'}</td>
+                        <td data-sort="${log.data}">${formatDate(log.data)}</td>
+                        <td>${log.user.nome}</td>
+                        <td><span class="badge ${getBadgeClass(log.acao)}">${log.acao}</span></td>
+                        <td>${log.entidade}</td>
+                        <td>${log.detalhes || '-'}</td>
                     `;
                     tbody.appendChild(tr);
                 });
