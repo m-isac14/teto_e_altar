@@ -696,7 +696,7 @@ elif menu == "⚙️ Configurações & Supabase":
         3. Adicione no arquivo `.streamlit/secrets.toml` ou no Streamlit Cloud:
         ```toml
         [connections.postgresql]
-        url = "postgresql://postgres.SEU_PROJETO:SUA_SENHA@aws-0-sa-east-1.pooler.supabase.com:6543/postgres"
+        url = "postgresql://postgres.SEU_PROJETO:SUA_SENHA@aws-1-sa-east-1.pooler.supabase.com:5432/postgres"
         ```
         """)
 
