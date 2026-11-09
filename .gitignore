@@ -28,10 +28,11 @@ venv/
 env/
 .env_python/
 
-# Variáveis de ambiente
+# Variáveis de ambiente & Segredos
 .env
 .env.local
 .env.*.local
+.streamlit/secrets.toml
 
 # IDEs
 .vscode/

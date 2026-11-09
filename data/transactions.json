@@ -1,0 +1,62 @@
+[
+  {
+    "id": 1,
+    "valor": 200.0,
+    "tipo": "receita",
+    "data": "2026-08-12 21:09:55",
+    "descricao": "Fotógrafo",
+    "categoria": null,
+    "user_id": 1,
+    "category_id": null
+  },
+  {
+    "id": 2,
+    "valor": 1300.0,
+    "tipo": "receita",
+    "data": "2026-08-21 07:21:09",
+    "descricao": "Teste.",
+    "categoria": null,
+    "user_id": 1,
+    "category_id": null
+  },
+  {
+    "id": 3,
+    "valor": 1300.87,
+    "tipo": "receita",
+    "data": "2026-08-21 07:24:44",
+    "descricao": "Saldo que já possuía.",
+    "categoria": null,
+    "user_id": 3,
+    "category_id": null
+  },
+  {
+    "id": 4,
+    "valor": 1300.87,
+    "tipo": "receita",
+    "data": "2026-08-24 07:14:38",
+    "descricao": "Saldo que já possuía.",
+    "categoria": null,
+    "user_id": 3,
+    "category_id": null
+  },
+  {
+    "id": 5,
+    "valor": 300.0,
+    "tipo": "despesa",
+    "data": "2026-08-25 20:30:01",
+    "descricao": "Microondas",
+    "categoria": "Apartamento",
+    "user_id": 1,
+    "category_id": 1
+  },
+  {
+    "id": 6,
+    "valor": 700.0,
+    "tipo": "despesa",
+    "data": "2026-08-25 20:31:21",
+    "descricao": "Documentação",
+    "categoria": "Casamento",
+    "user_id": 1,
+    "category_id": 2
+  }
+]

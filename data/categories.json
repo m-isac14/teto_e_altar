@@ -1,0 +1,26 @@
+[
+  {
+    "id": 1,
+    "nome": "Eletrodomésticos"
+  },
+  {
+    "id": 2,
+    "nome": "Documentação"
+  },
+  {
+    "id": 3,
+    "nome": "Buffet"
+  },
+  {
+    "id": 4,
+    "nome": "Móveis"
+  },
+  {
+    "id": 5,
+    "nome": "Material de Construção"
+  },
+  {
+    "id": 6,
+    "nome": "Gerais"
+  }
+]

@@ -1,0 +1,42 @@
+[
+  {
+    "id": 1,
+    "data": "2026-08-25 19:44:46",
+    "user_id": 1,
+    "acao": "CRIAR",
+    "entidade": "Subcategoria",
+    "detalhes": "Criou a subcategoria 'Microondas'"
+  },
+  {
+    "id": 2,
+    "data": "2026-08-25 19:45:06",
+    "user_id": 1,
+    "acao": "CRIAR",
+    "entidade": "Transação",
+    "detalhes": "Criou despesa no valor de R$ 300.00"
+  },
+  {
+    "id": 3,
+    "data": "2026-08-25 19:45:17",
+    "user_id": 1,
+    "acao": "EDITAR",
+    "entidade": "Subcategoria",
+    "detalhes": "Alterou subcategoria de 'Microondas' para 'Eletrodomésticos'"
+  },
+  {
+    "id": 4,
+    "data": "2026-08-25 19:46:02",
+    "user_id": 1,
+    "acao": "CRIAR",
+    "entidade": "Subcategoria",
+    "detalhes": "Criou a subcategoria 'Documentação'"
+  },
+  {
+    "id": 5,
+    "data": "2026-08-25 19:46:29",
+    "user_id": 1,
+    "acao": "CRIAR",
+    "entidade": "Transação",
+    "detalhes": "Criou despesa no valor de R$ 700.00"
+  }
+]

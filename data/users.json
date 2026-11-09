@@ -1,0 +1,20 @@
+[
+  {
+    "id": 1,
+    "nome": "Isac",
+    "email": "isac@teto.com",
+    "senha_hash": "$2b$12$/3S1KwA4PDN2NmZv4sCMbeVSta6x.M6OguXzQtiTvVW0Yt7oltiHG"
+  },
+  {
+    "id": 2,
+    "nome": "Noiva",
+    "email": "noiva@teto.com",
+    "senha_hash": "$2b$12$q1Txu7spWTxzoCJGcHxLL.0b3QAr03sz/axz9HAqK0qu.cWByK/Ra"
+  },
+  {
+    "id": 3,
+    "nome": "Test API",
+    "email": "test_api@test.com",
+    "senha_hash": "$2b$12$MFLXlYN/EqGeYgKuqScAseCVDenAUB7ei18K/piY7lzzZJTqGBReq"
+  }
+]
